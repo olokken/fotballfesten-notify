@@ -1,5 +1,8 @@
 import "dotenv/config";
 
+import { isWithinInterval } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
+
 import { checkIntervalMs, watchUrls } from "./config.js";
 import { checkPage, type Match } from "./checker.js";
 import { sendNotification } from "./notify.js";
@@ -20,7 +23,24 @@ function formatMessage(match: Match): string {
   ].join("\n");
 }
 
+function isWithinNorwegianRunWindow(date = new Date()): boolean {
+  const norwegianNow = toZonedTime(date, "Europe/Oslo");
+
+  const start = new Date(norwegianNow);
+  start.setHours(6, 30, 0, 0);
+
+  const end = new Date(norwegianNow);
+  end.setHours(23, 30, 0, 0);
+
+  return isWithinInterval(norwegianNow, { start, end });
+}
+
 async function runCheck(): Promise<void> {
+  if (!isWithinNorwegianRunWindow()) {
+    console.log("Outside Norwegian run window 06:30-23:30, skipping check.");
+    return;
+  }
+
   if (isRunning) {
     console.log("Previous check is still running, skipping this minute.");
     return;
